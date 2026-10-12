@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MQTT Control</title>
+
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Arial, "Noto Sans TC", sans-serif;
+      background: #f4f9fc;
+      color: #24313a;
+    }
+
+    .card {
+      width: min(92vw, 380px);
+      padding: 34px 28px;
+      border-radius: 22px;
+      background: #ffffff;
+      box-shadow: 0 12px 35px rgba(38, 70, 90, 0.12);
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 24px;
+      font-size: 28px;
+    }
+
+    .status-row {
+      margin-bottom: 24px;
+      font-size: 17px;
+    }
+
+    #status {
+      font-weight: 700;
+      color: #d58a00;
+    }
+
+    button {
+      width: 210px;
+      padding: 16px 18px;
+      border: 0;
+      border-radius: 14px;
+      background: #9edcf7;
+      color: #0b4561;
+      font-size: 19px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+
+    button:hover {
+      background: #7fcff2;
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    #message {
+      min-height: 24px;
+      margin-top: 20px;
+      font-size: 15px;
+      color: #5d6b74;
+    }
+
+    .small {
+      margin-top: 24px;
+      font-size: 12px;
+      color: #98a5ad;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="card">
+    <h1>MQTT Control</h1>
+
+    <div class="status-row">
+      MQTT Status:
+      <span id="status">Connecting...</span>
+    </div>
+
+    <button id="b1Button" type="button">B1 ON</button>
+
+    <div id="message">Waiting...</div>
+
+    <div class="small">
+      Broker: broker.emqx.io<br />
+      Topic: jjlab/a
+    </div>
+  </main>
+
+  <script>
+    const broker = "wss://broker.emqx.io:8084/mqtt";
+    const topic = "jjlab/a";
+    const payload = "b1_on";
+
+    const statusEl = document.getElementById("status");
+    const messageEl = document.getElementById("message");
+    const buttonEl = document.getElementById("b1Button");
+
+    const clientId =
+      "web_client_" + Math.random().toString(16).slice(2, 10);
+
+    const client = mqtt.connect(broker, {
+      clientId,
+      clean: true,
+      connectTimeout: 4000,
+      reconnectPeriod: 1000
+    });
+
+    client.on("connect", () => {
+      statusEl.textContent = "Connected";
+      statusEl.style.color = "#1d8b4f";
+      messageEl.textContent = "Ready";
+    });
+
+    client.on("reconnect", () => {
+      statusEl.textContent = "Reconnecting...";
+      statusEl.style.color = "#d58a00";
+    });
+
+    client.on("offline", () => {
+      statusEl.textContent = "Disconnected";
+      statusEl.style.color = "#c43d3d";
+    });
+
+    client.on("error", (err) => {
+      console.error("MQTT error:", err);
+      statusEl.textContent = "Connection Error";
+      statusEl.style.color = "#c43d3d";
+    });
+
+    buttonEl.addEventListener("click", () => {
+      if (!client.connected) {
+        messageEl.textContent = "MQTT is not connected.";
+        return;
+      }
+
+      client.publish(topic, payload, { qos: 0, retain: false }, (err) => {
+        if (err) {
+          messageEl.textContent = "Publish failed.";
+          return;
+        }
+
+        messageEl.textContent = `Sent: ${payload} → ${topic}`;
+      });
+    });
+  </script>
+</body>
+</html>
